@@ -21,7 +21,7 @@ const Header = ({ showBack = true, showCreateChat = true }) => {
           <button
             className={classNames(
               "py-1 pl-1 pr-3",
-              "border border-white rounded",
+              "border-2 border-white rounded",
               "flex items-center"
             )}
             onClick={handleBackClick}
@@ -40,9 +40,8 @@ const Header = ({ showBack = true, showCreateChat = true }) => {
               fill="none"
               color="white"
             >
-              {" "}
-              <title id="chevronLeftIconTitle">Chevron Left</title>{" "}
-              <polyline points="14 18 8 12 14 6 14 6" />{" "}
+              <title id="chevronLeftIconTitle">Chevron Left</title>
+              <polyline points="14 18 8 12 14 6 14 6" />
             </svg>
             back
           </button>
@@ -55,8 +54,8 @@ const Header = ({ showBack = true, showCreateChat = true }) => {
             <button
               className={classNames(
                 "py-1 pl-2 pr-3",
-                "border border-white rounded",
-                "bg-white text-gray-800",
+                "border-2 border-white rounded",
+                "bg-white text-gray-700",
                 "flex items-center"
               )}
             >
@@ -77,7 +76,7 @@ const Header = ({ showBack = true, showCreateChat = true }) => {
                 <path d="M15 10H9" />
                 <path d="M12 7V13" />
               </svg>
-              <span className="ml-1">Create Chat</span>
+              <span className="ml-1">New</span>
             </button>
           </Link>
         ) : null}
