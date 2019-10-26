@@ -5,6 +5,7 @@
   "dependencies": {
     "@fullhuman/postcss-purgecss": "^1.3.0",
     "@hot-loader/react-dom": "16.10.2",
+    "body-scroll-lock": "^2.6.4",
     "clsx": "^1.0.4",
     "cogo-toast": "^4.1.1",
     "constate": "^1.3.2",
@@ -14,10 +15,17 @@
     "prop-types": "^15.7.2",
     "react": "^16.11.0",
     "react-app-rewired": "^2.1.4",
+    "react-div-100vh": "0.3.4",
     "react-dom": "^16.11.0",
+    "react-hook-form": "^3.26.1",
     "react-hot-loader": "^4.12.15",
+    "react-infinite-scroller": "1.2.4",
     "react-scripts": "3.2.0",
-    "tailwindcss": "^1.1.3"
+    "react-stay-scrolled": "7.0.0",
+    "tailwindcss": "^1.1.3",
+    "use-async-memo": "1.2.2",
+    "use-force-update": "1.0.7",
+    "wouter": "^2.3.1"
   },
   "optionalDependencies": {
     "typescript": "3.6.4"
