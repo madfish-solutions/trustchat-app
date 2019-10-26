@@ -1,7 +1,6 @@
 import * as React from "react";
+import Chat from "app/chat/Chat";
 
-function App() {
-  return <div>KEK</div>;
-}
+const App = () => <Chat />;
 
 export default App;
