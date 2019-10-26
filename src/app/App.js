@@ -1,10 +1,15 @@
 import * as React from "react";
-import Chat from "app/chat/Chat";
-import useTronWebContext from "lib/useTronWebContext";
+import useTronWebContext from "lib/tron/useTronWebContext";
+import EnsureTronWeb from "lib/tron/EnsureTronWeb";
+import Page from "./App/Page";
 
 const App = () => (
   <useTronWebContext.Provider>
-    <Chat />
+    <EnsureTronWeb>
+      <React.Suspense fallback={null}>
+        <Page />
+      </React.Suspense>
+    </EnsureTronWeb>
   </useTronWebContext.Provider>
 );
 

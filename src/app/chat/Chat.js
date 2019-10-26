@@ -3,6 +3,7 @@ import classNames from "clsx";
 import * as BSL from "body-scroll-lock";
 import useStayScrolled from "react-stay-scrolled";
 import Div100vh from "react-div-100vh";
+import restrictWithTronWeb from "app/tron/restrictWithTronWeb";
 
 const MESSAGE = { text: "foo" };
 const INITIAL_MESSAGES = [
@@ -15,7 +16,10 @@ const INITIAL_MESSAGES = [
   MESSAGE
 ];
 
-const Chat = () => {
+const Chat = restrictWithTronWeb(({ params }) => {
+  const chatId = params.id;
+  console.info(chatId);
+
   const messagesBlockRef = React.useRef(null);
 
   const { stayScrolled } = useStayScrolled(messagesBlockRef);
@@ -63,6 +67,6 @@ const Chat = () => {
       </div>
     </Div100vh>
   );
-};
+});
 
 export default Chat;
