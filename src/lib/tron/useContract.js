@@ -1,12 +1,7 @@
-import createUseContext from "constate";
 import { useAsyncMemo } from "use-async-memo";
 import useTronWebContext from "lib/tron/useTronWebContext";
 
-const ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
-
-export default createUseContext(useContract);
-
-function useContract() {
+export default function useContract(address) {
   const { tronWeb } = useTronWebContext();
 
   const contract = useAsyncMemo(
@@ -16,7 +11,7 @@ function useContract() {
       }
 
       try {
-        const result = await tronWeb.tw.contract().at(ADDRESS);
+        const result = await tronWeb.tw.contract().at(address);
         if (result.Error) {
           throw new Error(result.Error);
         }
@@ -30,7 +25,7 @@ function useContract() {
         return null;
       }
     },
-    [tronWeb],
+    [tronWeb, address],
     null
   );
 

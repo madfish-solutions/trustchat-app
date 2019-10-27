@@ -1,0 +1,3 @@
+.focus-disabled :focus {
+  outline: 0 !important;
+}

@@ -4,16 +4,24 @@ import { useLocation } from "wouter";
 import useForm from "react-hook-form";
 import cogoToast from "cogo-toast";
 import restrictWithTronWeb from "app/tron/restrictWithTronWeb";
-import useContractContext from "app/tron/useContractContext";
+import useTrustchatContext from "app/trustchat/useTrustchatContext";
 import ContentContainer from "app/page/ContentContainer";
 import Header from "app/page/Header";
 
 const CreateChat = restrictWithTronWeb(() => {
-  const contract = useContractContext();
+  const { contract } = useTrustchatContext();
 
   const [creating, setCreating] = React.useState(false);
 
   const setLocation = useLocation()[1];
+
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  });
 
   const handleSubmit = React.useCallback(
     async ({ members }) => {
@@ -25,31 +33,30 @@ const CreateChat = restrictWithTronWeb(() => {
 
       try {
         const chatId = await contract
-          .openChat(
-            members,
-            contract.tronWeb.toHex(23),
-            contract.tronWeb.toHex(5)
-          )
-          .send({
-            shouldPollResponse: true
-          });
+          .openChat(contract.tronWeb.toHex("k".repeat(32)), members)
+          .send({ shouldPollResponse: true });
 
-        setCreating(false);
-        setLocation(`/chat/${chatId}`);
+        if (mountedRef.current) {
+          setCreating(false);
+          setLocation(`/chat/${chatId}`, true);
+        }
       } catch (err) {
         if (process.env.NODE_ENV === "development") {
           console.error(err);
         }
 
         cogoToast.error(err.message);
-        setCreating(false);
+
+        if (mountedRef.current) {
+          setCreating(false);
+        }
       }
     },
     [contract, creating, setLocation]
   );
 
   return (
-    <ContentContainer>
+    <ContentContainer className="shadow rounded-b overflow-hidden">
       <Header showCreateChat={false} />
       <Form loading={creating} onSubmit={handleSubmit} />
     </ContentContainer>
@@ -79,10 +86,7 @@ const Form = ({ onSubmit, loading = false }) => {
   );
 
   return (
-    <form
-      className="w-full rounded-b overflow-hidden"
-      onSubmit={handleSubmit(onSubmit)}
-    >
+    <form className="w-full" onSubmit={handleSubmit(onSubmit)}>
       <div className="p-4 bg-white">
         {members.map((member, index) => {
           const removeDisabled = member === 0;
@@ -167,9 +171,9 @@ const Form = ({ onSubmit, loading = false }) => {
             type="button"
             className={classNames(
               "py-1 px-4",
-              "border-2 border-gray-500",
+              "border-2 border-gray-500 hover:border-gray-600",
               "rounded",
-              "text-gray-500 text-base font-medium",
+              "text-gray-500 hover:text-gray-600 text-base font-medium",
               "flex items-center"
             )}
             onClick={addMember}
@@ -200,7 +204,7 @@ const Form = ({ onSubmit, loading = false }) => {
       <div className="bg-gray-100 p-4">
         <button
           className={classNames(
-            "bg-green-500 hover:bg-green-700 text-white text-base font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline",
+            "bg-green-500 hover:bg-green-700 text-white text-base font-bold py-2 px-6 rounded",
             loading && "opacity-50"
           )}
           type="submit"
