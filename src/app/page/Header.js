@@ -11,7 +11,8 @@ const Header = ({ showBack = true, showCreateChat = true }) => {
     <header
       className={classNames(
         "w-full h-16 px-4",
-        "bg-red-400",
+        "bg-red-500",
+        "border-b-2 border-red-300",
         "flex items-center",
         "text-white"
       )}
@@ -21,7 +22,8 @@ const Header = ({ showBack = true, showCreateChat = true }) => {
           <button
             className={classNames(
               "py-1 pl-1 pr-3",
-              "border-2 border-white rounded",
+              "border-2 border-red-200 hover:border-red-100",
+              "rounded",
               "flex items-center"
             )}
             onClick={handleBackClick}
@@ -54,7 +56,8 @@ const Header = ({ showBack = true, showCreateChat = true }) => {
             <button
               className={classNames(
                 "py-1 pl-2 pr-3",
-                "border-2 border-white rounded",
+                "border-2 border-red-200 hover:border-red-100",
+                "rounded",
                 "bg-white text-gray-700",
                 "flex items-center"
               )}

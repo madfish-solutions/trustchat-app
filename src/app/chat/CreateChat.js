@@ -9,11 +9,19 @@ import ContentContainer from "app/page/ContentContainer";
 import Header from "app/page/Header";
 
 const CreateChat = restrictWithTronWeb(() => {
-  const contract = useContractContext();
+  const { contract } = useContractContext();
 
   const [creating, setCreating] = React.useState(false);
 
   const setLocation = useLocation()[1];
+
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  });
 
   const handleSubmit = React.useCallback(
     async ({ members }) => {
@@ -25,24 +33,23 @@ const CreateChat = restrictWithTronWeb(() => {
 
       try {
         const chatId = await contract
-          .openChat(
-            members,
-            contract.tronWeb.toHex(23),
-            contract.tronWeb.toHex(5)
-          )
-          .send({
-            shouldPollResponse: true
-          });
+          .openChat(contract.tronWeb.toHex("k".repeat(32)), members)
+          .send({ shouldPollResponse: true });
 
-        setCreating(false);
-        setLocation(`/chat/${chatId}`);
+        if (mountedRef.current) {
+          setCreating(false);
+          setLocation(`/chat/${chatId}`, true);
+        }
       } catch (err) {
         if (process.env.NODE_ENV === "development") {
           console.error(err);
         }
 
         cogoToast.error(err.message);
-        setCreating(false);
+
+        if (mountedRef.current) {
+          setCreating(false);
+        }
       }
     },
     [contract, creating, setLocation]

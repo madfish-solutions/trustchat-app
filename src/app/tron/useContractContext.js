@@ -1,3 +1,4 @@
+import * as React from "react";
 import createUseContext from "constate";
 import { useAsyncMemo } from "use-async-memo";
 import useTronWebContext from "lib/tron/useTronWebContext";
@@ -34,5 +35,16 @@ function useContract() {
     null
   );
 
-  return contract;
+  const getChat = React.useCallback(
+    async id => {
+      if (!contract) {
+        return [null, null, null];
+      }
+
+      return contract.getChat(id).call();
+    },
+    [contract]
+  );
+
+  return { contract, getChat };
 }
