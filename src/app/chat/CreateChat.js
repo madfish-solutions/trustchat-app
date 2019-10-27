@@ -4,12 +4,12 @@ import { useLocation } from "wouter";
 import useForm from "react-hook-form";
 import cogoToast from "cogo-toast";
 import restrictWithTronWeb from "app/tron/restrictWithTronWeb";
-import useContractContext from "app/tron/useContractContext";
+import useTrustchatContext from "app/trustchat/useTrustchatContext";
 import ContentContainer from "app/page/ContentContainer";
 import Header from "app/page/Header";
 
 const CreateChat = restrictWithTronWeb(() => {
-  const { contract } = useContractContext();
+  const { contract } = useTrustchatContext();
 
   const [creating, setCreating] = React.useState(false);
 

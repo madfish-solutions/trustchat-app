@@ -55,17 +55,50 @@ const Chat = restrictWithTronWeb(({ params }) => {
           className={classNames(
             "flex-1 bg-white",
             "overflow-y-auto scrolling-touch",
+            "p-4",
             "flex flex-col"
           )}
         >
           <div className="flex-1" />
           {messages.map(({ text }, i) => (
-            <div key={i}>{`${text} ${i}`}</div>
+            <div key={i} className={classNames("flex items-center", "mt-4")}>
+              <span
+                key={i}
+                className={classNames("py-2 px-5", "bg-gray-200", "rounded")}
+              >{`${text} ${i}`}</span>
+            </div>
           ))}
         </div>
-        <div className="h-16 bg-green-300">
-          {/* <input type="text" className="w-full h-full" /> */}
-        </div>
+        <form
+          className={classNames(
+            "w-full h-16",
+            "bg-gray-200",
+            "p-2",
+            "flex items-strech"
+          )}
+        >
+          <textarea
+            className={classNames(
+              "flex-1",
+              "bg-white rounded",
+              "py-1 px-2",
+              "focus:outline-none focus:shadow-outline"
+            )}
+          />
+          <button
+            className={classNames(
+              "ml-2",
+              "w-20",
+              "bg-blue-400 hover:bg-blue-500",
+              "rounded",
+              "text-white hover:text-gray-100",
+              "font-bold",
+              "flex items-center justify-center"
+            )}
+          >
+            Send
+          </button>
+        </form>
       </ContentContainer>
     </Div100vh>
   );

@@ -4,14 +4,10 @@ import * as BSL from "body-scroll-lock";
 import { Link } from "wouter";
 import Div100vh from "react-div-100vh";
 import InfiniteScroll from "react-infinite-scroller";
-import useTronWebContext from "lib/tron/useTronWebContext";
-import useContractContext from "app/tron/useContractContext";
-import isAddressesEqual from "lib/tron/isAddressesEqual";
+import useTrustchatContext from "app/trustchat/useTrustchatContext";
 import restrictWithTronWeb from "app/tron/restrictWithTronWeb";
 import ContentContainer from "app/page/ContentContainer";
 import Header from "app/page/Header";
-
-const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
 
 const ChatList = restrictWithTronWeb(() => {
   const chatsBlockRef = React.useRef(null);
@@ -22,182 +18,17 @@ const ChatList = restrictWithTronWeb(() => {
     return () => BSL.enableBodyScroll(el);
   }, []);
 
-  const { tronWeb, accountId } = useTronWebContext();
-  const { contract, getChat } = useContractContext();
-
-  /**
-   * `Invitation` Events
-   */
-  const [invitationEvents, pureSetInvitationEvents] = React.useState([]);
-  const lastInvitationEventRef = React.useRef(null);
-
-  const setInvitationEvents = React.useCallback(
-    value => {
-      pureSetInvitationEvents(currentEvents => {
-        const newEvents =
-          typeof value === "function" ? value(currentEvents) : value;
-        lastInvitationEventRef.current =
-          newEvents[newEvents.length - 1] || null;
-        return newEvents;
-      });
-    },
-    [pureSetInvitationEvents]
-  );
-
-  const iEventsHasMoreRef = React.useRef(true);
-
-  const fetchInvitationEvents = React.useCallback(
-    async (page = 1) => {
-      const size = 20;
-      const events = await tronWeb.tw.getEventResult(CONTRACT_ADDRESS, {
-        previousLastEventFingerprint: lastInvitationEventRef.current
-          ? lastInvitationEventRef.current.timestamp
-          : null,
-        eventName: "Invitation",
-        size,
-        page
-      });
-
-      iEventsHasMoreRef.current = events.length === size;
-
-      return events.filter(evt =>
-        isAddressesEqual(tronWeb.tw, evt.result._member, accountId)
-      );
-    },
-    [tronWeb, accountId]
-  );
-
-  const handleIEventsLoadMore = React.useCallback(
-    async page => {
-      const events = await fetchInvitationEvents(page);
-      setInvitationEvents(currentEvents => currentEvents.concat(events));
-    },
-    [fetchInvitationEvents, setInvitationEvents]
-  );
-
-  /**
-   * `JoinChat` Events
-   */
-  const [joinChatEvents, pureSetJoinChatEvents] = React.useState([]);
-  const lastJoinChatEventRef = React.useRef(null);
-
-  const setJoinChatEvents = React.useCallback(
-    value => {
-      pureSetJoinChatEvents(currentEvents => {
-        const newEvents =
-          typeof value === "function" ? value(currentEvents) : value;
-        lastJoinChatEventRef.current = newEvents[newEvents.length - 1] || null;
-        return newEvents;
-      });
-    },
-    [pureSetJoinChatEvents]
-  );
-
-  const jcEventsHasMoreRef = React.useRef(true);
-
-  const fetchJoinChatEvents = React.useCallback(
-    async (page = 1) => {
-      if (!getChat) {
-        return [];
-      }
-
-      const size = 20;
-      const events = await tronWeb.tw.getEventResult(CONTRACT_ADDRESS, {
-        previousLastEventFingerprint: lastJoinChatEventRef.current
-          ? lastJoinChatEventRef.current.timestamp
-          : null,
-        eventName: "JoinChat",
-        size,
-        page
-      });
-
-      jcEventsHasMoreRef.current = events.length === size;
-
-      const myEvents = events.filter(evt =>
-        isAddressesEqual(tronWeb.tw, evt.result._member, accountId)
-      );
-
-      return Promise.all(
-        myEvents.map(async evt => {
-          const [pubKeys, members, invitations] = await getChat(
-            evt.result._chatId
-          );
-          const evtCopy = { ...evt };
-          Object.assign(evtCopy.result, { pubKeys, members, invitations });
-          return evtCopy;
-        })
-      );
-    },
-    [tronWeb, accountId, getChat]
-  );
-
-  const handleJCEventsLoadMore = React.useCallback(
-    async page => {
-      const events = await fetchJoinChatEvents(page);
-      setJoinChatEvents(currentEvents => currentEvents.concat(events));
-    },
-    [fetchJoinChatEvents, setJoinChatEvents]
-  );
-
-  React.useEffect(() => {
-    lastInvitationEventRef.current = null;
-    lastJoinChatEventRef.current = null;
-
-    Promise.all([fetchInvitationEvents(), fetchJoinChatEvents()]).then(
-      ([iEvents, jcEvents]) => {
-        setInvitationEvents(iEvents);
-        setJoinChatEvents(jcEvents);
-      }
-    );
-  }, [
-    fetchInvitationEvents,
-    fetchJoinChatEvents,
-    setInvitationEvents,
-    setJoinChatEvents
-  ]);
-
-  const acceptInvitation = React.useCallback(
-    async iEvent => {
-      try {
-        if (!contract) {
-          return;
-        }
-
-        await contract
-          .joinChat(
-            iEvent.result._chatId,
-            contract.tronWeb.toHex("j".repeat(32))
-          )
-          .send({ shouldPollResponse: true });
-      } catch (err) {
-        if (process.env.NODE_ENV === "development") {
-          console.error(err);
-        }
-      }
-    },
-    [contract]
-  );
+  const {
+    chats,
+    handleChatsLoadMore,
+    hasMoreChats,
+    acceptInvitation
+  } = useTrustchatContext();
 
   return (
     <Div100vh>
       <ContentContainer className="h-full flex flex-col shadow">
         <Header showBack={false} />
-        <LastInvitation
-          invitationEvents={invitationEvents}
-          joinChatEvents={joinChatEvents}
-          hasMore={iEventsHasMoreRef.current}
-          loadMore={handleIEventsLoadMore}
-        >
-          {iEvent =>
-            iEvent ? (
-              <div className="p-2 bg-gray-200 flex items-center">
-                <span>Last Invitation {iEvent.result._chatId}</span>
-                <div className="flex-1" />
-                <button onClick={() => acceptInvitation(iEvent)}>Accept</button>
-              </div>
-            ) : null
-          }
-        </LastInvitation>
         <div
           ref={chatsBlockRef}
           className={classNames(
@@ -208,8 +39,8 @@ const ChatList = restrictWithTronWeb(() => {
           <InfiniteScroll
             pageStart={1}
             initialLoad={false}
-            loadMore={handleJCEventsLoadMore}
-            hasMore={jcEventsHasMoreRef.current}
+            loadMore={handleChatsLoadMore}
+            hasMore={hasMoreChats}
             loader={
               <div
                 key="-1"
@@ -222,16 +53,16 @@ const ChatList = restrictWithTronWeb(() => {
             getScrollParent={() => chatsBlockRef.current}
           >
             <div className="flex flex-col">
-              {joinChatEvents
-                .map(createChat)
-                .map(({ id, invitations, members }, index, arr) => {
+              {chats.map(
+                ({ id, invitations, users, readyToChat }, index, arr) => {
                   const last = index === arr.length - 1;
 
-                  return invitations && members ? (
-                    <Link key={id} href={`/chat/${id}`}>
+                  return (
+                    <Link key={id} href={readyToChat ? `/chat/${id}` : null}>
                       <a
                         href="stub"
                         className={classNames(
+                          "relative",
                           "w-full",
                           "hover:bg-gray-100",
                           "flex items-strech"
@@ -274,7 +105,7 @@ const ChatList = restrictWithTronWeb(() => {
                               .concat(invitations)
                               .reverse()
                               .map(mmbr => {
-                                const joined = members.some(m => m === mmbr);
+                                const joined = users.some(m => m === mmbr);
 
                                 return (
                                   <div
@@ -298,14 +129,34 @@ const ChatList = restrictWithTronWeb(() => {
                           </div>
 
                           <span className="text-xs text-gray-500">
-                            <b>{members.length}</b> of{" "}
-                            <b>{invitations.length}</b> joined
+                            <b>{users.length}</b> of <b>{invitations.length}</b>{" "}
+                            joined
                           </span>
                         </div>
+
+                        {!readyToChat ? (
+                          <div
+                            className={classNames(
+                              "absolute inset-0",
+                              "flex items-center justify-center"
+                            )}
+                            style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+                          >
+                            <button
+                              className={classNames(
+                                "bg-gray-100 hover:bg-gray-200 text-gray-900 text-base font-bold py-2 px-6 rounded"
+                              )}
+                              onClick={e => acceptInvitation(id)}
+                            >
+                              Join to Chat
+                            </button>
+                          </div>
+                        ) : null}
                       </a>
                     </Link>
-                  ) : null;
-                })}
+                  );
+                }
+              )}
             </div>
           </InfiniteScroll>
         </div>
@@ -315,52 +166,6 @@ const ChatList = restrictWithTronWeb(() => {
 });
 
 export default ChatList;
-
-function createChat(evt) {
-  const {
-    _chatId: id,
-    _member: member,
-    invitations,
-    members,
-    pubKeys
-  } = evt.result;
-
-  return { id, member, invitations, members, pubKeys };
-}
-
-const LastInvitation = ({
-  children,
-  invitationEvents,
-  joinChatEvents
-  // hasMore,
-  // loadMore
-}) => {
-  // const pageRef = React.useRef(1);
-
-  const realIEvents = React.useMemo(
-    () =>
-      invitationEvents.filter(evt =>
-        joinChatEvents.every(
-          jcEvt => jcEvt.result._chatId !== evt.result._chatId
-        )
-      ),
-    [invitationEvents, joinChatEvents]
-  );
-
-  // const realIEventsSize = React.useMemo(() => realIEvents.length, [
-  //   realIEvents
-  // ]);
-
-  // React.useEffect(() => {
-  //   if (realIEventsSize === 0 && hasMore) {
-  //     loadMore(pageRef.current);
-  //     pageRef.current++;
-  //   }
-  // }, [realIEventsSize, hasMore, loadMore]);
-
-  const lastEvent = realIEvents[0];
-  return children(lastEvent);
-};
 
 function getImgUrl(id, type = "jdenticon") {
   return `https://avatars.dicebear.com/v2/${type}/${id}.svg`;

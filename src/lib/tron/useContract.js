@@ -1,13 +1,7 @@
-import * as React from "react";
-import createUseContext from "constate";
 import { useAsyncMemo } from "use-async-memo";
 import useTronWebContext from "lib/tron/useTronWebContext";
 
-const ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
-
-export default createUseContext(useContract);
-
-function useContract() {
+export default function useContract(address) {
   const { tronWeb } = useTronWebContext();
 
   const contract = useAsyncMemo(
@@ -17,7 +11,7 @@ function useContract() {
       }
 
       try {
-        const result = await tronWeb.tw.contract().at(ADDRESS);
+        const result = await tronWeb.tw.contract().at(address);
         if (result.Error) {
           throw new Error(result.Error);
         }
@@ -31,20 +25,9 @@ function useContract() {
         return null;
       }
     },
-    [tronWeb],
+    [tronWeb, address],
     null
   );
 
-  const getChat = React.useCallback(
-    async id => {
-      if (!contract) {
-        return [null, null, null];
-      }
-
-      return contract.getChat(id).call();
-    },
-    [contract]
-  );
-
-  return { contract, getChat };
+  return contract;
 }
