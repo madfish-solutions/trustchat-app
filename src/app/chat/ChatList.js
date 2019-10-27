@@ -227,7 +227,7 @@ const ChatList = restrictWithTronWeb(() => {
                 .map(({ id, invitations, members }, index, arr) => {
                   const last = index === arr.length - 1;
 
-                  return (
+                  return invitations && members ? (
                     <Link key={id} href={`/chat/${id}`}>
                       <a
                         href="stub"
@@ -304,7 +304,7 @@ const ChatList = restrictWithTronWeb(() => {
                         </div>
                       </a>
                     </Link>
-                  );
+                  ) : null;
                 })}
             </div>
           </InfiniteScroll>
