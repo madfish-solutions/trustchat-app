@@ -48,7 +48,7 @@ const Chat = restrictWithTronWeb(({ params }) => {
 
   return (
     <Div100vh>
-      <ContentContainer className="h-full flex flex-col">
+      <ContentContainer className="h-full flex flex-col shadow">
         <Header />
         <div
           ref={messagesBlockRef}

@@ -56,7 +56,7 @@ const CreateChat = restrictWithTronWeb(() => {
   );
 
   return (
-    <ContentContainer>
+    <ContentContainer className="shadow rounded-b overflow-hidden">
       <Header showCreateChat={false} />
       <Form loading={creating} onSubmit={handleSubmit} />
     </ContentContainer>
@@ -86,10 +86,7 @@ const Form = ({ onSubmit, loading = false }) => {
   );
 
   return (
-    <form
-      className="w-full rounded-b overflow-hidden"
-      onSubmit={handleSubmit(onSubmit)}
-    >
+    <form className="w-full" onSubmit={handleSubmit(onSubmit)}>
       <div className="p-4 bg-white">
         {members.map((member, index) => {
           const removeDisabled = member === 0;
@@ -174,9 +171,9 @@ const Form = ({ onSubmit, loading = false }) => {
             type="button"
             className={classNames(
               "py-1 px-4",
-              "border-2 border-gray-500",
+              "border-2 border-gray-500 hover:border-gray-600",
               "rounded",
-              "text-gray-500 text-base font-medium",
+              "text-gray-500 hover:text-gray-600 text-base font-medium",
               "flex items-center"
             )}
             onClick={addMember}
@@ -207,7 +204,7 @@ const Form = ({ onSubmit, loading = false }) => {
       <div className="bg-gray-100 p-4">
         <button
           className={classNames(
-            "bg-green-500 hover:bg-green-700 text-white text-base font-bold py-2 px-6 rounded focus:outline-none focus:shadow-outline",
+            "bg-green-500 hover:bg-green-700 text-white text-base font-bold py-2 px-6 rounded",
             loading && "opacity-50"
           )}
           type="submit"

@@ -180,7 +180,7 @@ const ChatList = restrictWithTronWeb(() => {
 
   return (
     <Div100vh>
-      <ContentContainer className="h-full flex flex-col">
+      <ContentContainer className="h-full flex flex-col shadow">
         <Header showBack={false} />
         <LastInvitation
           invitationEvents={invitationEvents}
