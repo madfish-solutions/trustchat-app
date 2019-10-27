@@ -3,13 +3,15 @@ import classNames from "clsx";
 import { useLocation } from "wouter";
 import useForm from "react-hook-form";
 import cogoToast from "cogo-toast";
+// import { Buffer } from "buffer";
+import isAddressesEqual from "lib/tron/isAddressesEqual";
 import restrictWithTronWeb from "app/tron/restrictWithTronWeb";
 import useTrustchatContext from "app/trustchat/useTrustchatContext";
 import ContentContainer from "app/page/ContentContainer";
 import Header from "app/page/Header";
 
 const CreateChat = restrictWithTronWeb(() => {
-  const { contract } = useTrustchatContext();
+  const { contract, accountId, pbPart1Hex, pbPart2Hex } = useTrustchatContext();
 
   const [creating, setCreating] = React.useState(false);
 
@@ -33,7 +35,13 @@ const CreateChat = restrictWithTronWeb(() => {
 
       try {
         const chatId = await contract
-          .openChat(contract.tronWeb.toHex("k".repeat(32)), members)
+          .openChat(
+            pbPart1Hex,
+            pbPart2Hex,
+            members.filter(
+              m => !isAddressesEqual(contract.tronWeb, m, accountId)
+            )
+          )
           .send({ shouldPollResponse: true });
 
         if (mountedRef.current) {
@@ -52,7 +60,7 @@ const CreateChat = restrictWithTronWeb(() => {
         }
       }
     },
-    [contract, creating, setLocation]
+    [contract, creating, setLocation, pbPart1Hex, pbPart2Hex, accountId]
   );
 
   return (
