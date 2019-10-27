@@ -1,9 +1,12 @@
 import * as React from "react";
 import createUseContext from "constate";
+import cryptico from "cryptico";
+import { Buffer } from "buffer";
 import useTronWebContext from "lib/tron/useTronWebContext";
 import useContract from "lib/tron/useContract";
 import useWatcher from "lib/tron/useWatcher";
 import isAddressesEqual from "lib/tron/isAddressesEqual";
+import getPubKeys from "app/trustchat/getPubKeys";
 
 const CONTRACT_ADDRESS = process.env.REACT_APP_CONTRACT_ADDRESS;
 
@@ -12,6 +15,27 @@ export default createUseContext(useTronchat);
 function useTronchat() {
   const { tronWeb, accountId } = useTronWebContext();
   const contract = useContract(CONTRACT_ADDRESS);
+
+  const accountPrivKey = React.useMemo(
+    () => cryptico.generateRSAKey(accountId, 512),
+    [accountId]
+  );
+
+  const accountPubKey = React.useMemo(
+    () => cryptico.publicKeyString(accountPrivKey),
+    [accountPrivKey]
+  );
+
+  const [pbPart1Hex, pbPart2Hex] = React.useMemo(() => {
+    try {
+      const buf = Buffer.from(accountPubKey, "base64");
+      const part1 = buf.slice(0, buf.length / 2);
+      const part2 = buf.slice(buf.length / 2, buf.length);
+      return [`0x${part1.toString("hex")}`, `0x${part2.toString("hex")}`];
+    } catch (_err) {
+      return [null, null];
+    }
+  }, [accountPubKey]);
 
   const [chats, setChats] = React.useState([]);
 
@@ -133,7 +157,7 @@ function useTronchat() {
         }
 
         await contract
-          .joinChat(chatId, contract.tronWeb.toHex("j".repeat(32)))
+          .joinChat(chatId, pbPart1Hex, pbPart2Hex)
           .send({ shouldPollResponse: true });
       } catch (err) {
         if (process.env.NODE_ENV === "development") {
@@ -141,7 +165,7 @@ function useTronchat() {
         }
       }
     },
-    [contract]
+    [contract, pbPart1Hex, pbPart2Hex]
   );
 
   const sendMessage = React.useCallback(
@@ -150,11 +174,24 @@ function useTronchat() {
         return;
       }
 
+      const chat = chats.find(c => c.id === chatId);
+      if (!chat) {
+        throw new Error("Error. Chat Not Found! Try to reassign to chat");
+      }
+
+      const encMessages = getPubKeys(chat.pubKeys).map(
+        key => cryptico.encrypt(message, key).cipher
+      );
+
+      const messagePackage = contract.tronWeb.fromUtf8(
+        JSON.stringify(encMessages)
+      );
+
       return contract
-        .send(chatId, Date.now(), message)
+        .send(chatId, Date.now(), messagePackage)
         .send({ shouldPollResponse: true });
     },
-    [contract]
+    [contract, chats]
   );
 
   const getMessageEvents = React.useCallback(
@@ -177,6 +214,11 @@ function useTronchat() {
   return React.useMemo(
     () => ({
       contract,
+      accountId,
+      accountPrivKey,
+      accountPubKey,
+      pbPart1Hex,
+      pbPart2Hex,
       chats,
       handleChatsLoadMore,
       hasMoreChats,
@@ -187,6 +229,11 @@ function useTronchat() {
     }),
     [
       contract,
+      accountId,
+      accountPrivKey,
+      accountPubKey,
+      pbPart1Hex,
+      pbPart2Hex,
       chats,
       handleChatsLoadMore,
       hasMoreChats,

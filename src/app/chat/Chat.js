@@ -3,6 +3,7 @@ import classNames from "clsx";
 import * as BSL from "body-scroll-lock";
 import useStayScrolled from "react-stay-scrolled";
 import Div100vh from "react-div-100vh";
+import cryptico from "cryptico";
 import InfiniteScroll from "react-infinite-scroller";
 import cogoToast from "cogo-toast";
 import useTronWebContext from "lib/tron/useTronWebContext";
@@ -32,8 +33,31 @@ const Chat = restrictWithTronWeb(({ params }) => {
 
   const chatId = params.id;
 
-  const { contract, getMessageEvents, sendMessage } = useTrustchatContext();
+  const {
+    contract,
+    getMessageEvents,
+    sendMessage,
+    chats,
+    accountPrivKey
+  } = useTrustchatContext();
   const { accountId } = useTronWebContext();
+
+  const cht = React.useMemo(() => chats.find(c => c.id === chatId) || null, [
+    chats,
+    chatId
+  ]);
+  const myIndex = React.useMemo(() => {
+    if (!(contract && cht && accountId)) {
+      return null;
+    }
+
+    // console.info(cht.users, accountId);
+    const i = cht.users.findIndex(u =>
+      isAddressesEqual(contract.tronWeb, u, accountId)
+    );
+    // console.info(i);
+    return i;
+  }, [contract, cht, accountId]);
 
   const lastMessageEventRef = React.useRef(null);
   const messageEventsHasMoreRef = React.useRef(true);
@@ -63,21 +87,35 @@ const Chat = restrictWithTronWeb(({ params }) => {
         return null;
       }
 
-      return {
-        chatId: evt.result._chatId,
-        timestamp: evt.result._msgId,
-        from: evt.result._from,
-        message: contract.tronWeb.toUtf8(evt.result._message),
-        my: isAddressesEqual(contract.tronWeb, evt.result._from, accountId)
-      };
+      if (myIndex === null || myIndex === -1) {
+        return null;
+      }
+
+      try {
+        const encMessages = JSON.parse(
+          contract.tronWeb.toUtf8(evt.result._message)
+        );
+        const myMessage = encMessages[myIndex];
+        const message = cryptico.decrypt(myMessage, accountPrivKey).plaintext;
+
+        return {
+          chatId: evt.result._chatId,
+          timestamp: evt.result._msgId,
+          from: evt.result._from,
+          message,
+          my: isAddressesEqual(contract.tronWeb, evt.result._from, accountId)
+        };
+      } catch (_err) {
+        return null;
+      }
     },
-    [contract, accountId]
+    [contract, accountId, myIndex, accountPrivKey]
   );
 
   React.useEffect(() => {
     lastMessageEventRef.current = null;
     fetchMessageEvents().then(events => {
-      setMessages(events.map(toMessage));
+      setMessages(events.map(toMessage).filter(Boolean));
     });
   }, [fetchMessageEvents, toMessage]);
 
@@ -85,7 +123,7 @@ const Chat = restrictWithTronWeb(({ params }) => {
     async page => {
       const events = await fetchMessageEvents(page);
       setMessages(currentMessages => {
-        return currentMessages.concat(events.map(toMessage));
+        return currentMessages.concat(events.map(toMessage).filter(Boolean));
       });
     },
     [fetchMessageEvents, toMessage]
@@ -99,7 +137,10 @@ const Chat = restrictWithTronWeb(({ params }) => {
   const handleMessageEventRes = React.useCallback(
     evt => {
       if (evt.result._chatId === chatId) {
-        setMessages(messages => [toMessage(evt), ...messages]);
+        const msg = toMessage(evt);
+        if (msg) {
+          setMessages(messages => [toMessage(evt), ...messages]);
+        }
       }
     },
     [chatId, setMessages, toMessage]
@@ -121,10 +162,6 @@ const Chat = restrictWithTronWeb(({ params }) => {
   });
 
   const handleSendMessage = React.useCallback(async () => {
-    if (!contract) {
-      return;
-    }
-
     const message = `${messageFieldRef.current.value.trim()}`;
     if (!message) return;
 
@@ -133,7 +170,7 @@ const Chat = restrictWithTronWeb(({ params }) => {
       cogoToast.info("Sending encrypted message...");
 
       messageFieldRef.current.value = "";
-      await sendMessage(chatId, contract.tronWeb.fromUtf8(message));
+      await sendMessage(chatId, message);
 
       // if (mountedRef.current) {
       //   messageFieldRef.current.value = "";
@@ -150,7 +187,7 @@ const Chat = restrictWithTronWeb(({ params }) => {
       //   setSending(false);
       // }
     }
-  }, [contract, sendMessage, chatId]);
+  }, [sendMessage, chatId]);
 
   return (
     <Div100vh>
@@ -204,8 +241,10 @@ const Chat = restrictWithTronWeb(({ params }) => {
                       "py-2 px-5",
                       my ? "bg-blue-200" : "bg-gray-200",
                       "text-sm text-gray-800",
-                      "rounded"
+                      "rounded",
+                      "max-w-full"
                     )}
+                    style={{ wordWrap: "break-word" }}
                   >
                     {message}
                   </span>
