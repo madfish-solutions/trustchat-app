@@ -150,9 +150,23 @@ function useTronchat() {
         return;
       }
 
-      await contract
+      return contract
         .send(chatId, Date.now(), message)
         .send({ shouldPollResponse: true });
+    },
+    [contract]
+  );
+
+  const getMessageEvents = React.useCallback(
+    async (params = {}) => {
+      if (!contract) {
+        return null;
+      }
+
+      return contract.tronWeb.getEventResult(CONTRACT_ADDRESS, {
+        eventName: "Message",
+        ...params
+      });
     },
     [contract]
   );
@@ -168,6 +182,7 @@ function useTronchat() {
       hasMoreChats,
       acceptInvitation,
       sendMessage,
+      getMessageEvents,
       initialized
     }),
     [
@@ -177,6 +192,7 @@ function useTronchat() {
       hasMoreChats,
       acceptInvitation,
       sendMessage,
+      getMessageEvents,
       initialized
     ]
   );

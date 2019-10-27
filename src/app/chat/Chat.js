@@ -3,25 +3,17 @@ import classNames from "clsx";
 import * as BSL from "body-scroll-lock";
 import useStayScrolled from "react-stay-scrolled";
 import Div100vh from "react-div-100vh";
+import InfiniteScroll from "react-infinite-scroller";
+import cogoToast from "cogo-toast";
+import useTronWebContext from "lib/tron/useTronWebContext";
+import useWatcher from "lib/tron/useWatcher";
+import isAddressesEqual from "lib/tron/isAddressesEqual";
 import restrictWithTronWeb from "app/tron/restrictWithTronWeb";
+import useTrustchatContext from "app/trustchat/useTrustchatContext";
 import ContentContainer from "app/page/ContentContainer";
 import Header from "app/page/Header";
 
-const MESSAGE = { text: "foo" };
-const INITIAL_MESSAGES = [
-  MESSAGE,
-  MESSAGE,
-  MESSAGE,
-  MESSAGE,
-  MESSAGE,
-  MESSAGE,
-  MESSAGE
-];
-
 const Chat = restrictWithTronWeb(({ params }) => {
-  const chatId = params.id;
-  console.info(chatId);
-
   const messagesBlockRef = React.useRef(null);
 
   const { stayScrolled } = useStayScrolled(messagesBlockRef);
@@ -32,19 +24,133 @@ const Chat = restrictWithTronWeb(({ params }) => {
     return () => BSL.enableBodyScroll(el);
   }, []);
 
-  const [messages, setMessages] = React.useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = React.useState([]);
 
   React.useLayoutEffect(() => {
     stayScrolled();
   }, [stayScrolled, messages]);
 
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setMessages(prevMessages => prevMessages.concat([MESSAGE]));
-    }, 500);
+  const chatId = params.id;
 
-    return () => clearInterval(interval);
-  }, []);
+  const { contract, getMessageEvents, sendMessage } = useTrustchatContext();
+  const { accountId } = useTronWebContext();
+
+  const lastMessageEventRef = React.useRef(null);
+  const messageEventsHasMoreRef = React.useRef(true);
+
+  const fetchMessageEvents = React.useCallback(
+    async (page = 1) => {
+      const size = 100;
+      const events = await getMessageEvents({
+        previousLastEventFingerprint: lastMessageEventRef.current
+          ? lastMessageEventRef.current.timestamp
+          : null,
+        size,
+        page
+      });
+
+      lastMessageEventRef.current = events[events.length - 1];
+      messageEventsHasMoreRef.current = events.length === size;
+
+      return events.filter(evt => evt.result._chatId === chatId);
+    },
+    [getMessageEvents, chatId]
+  );
+
+  const toMessage = React.useCallback(
+    evt => {
+      if (!contract || !accountId) {
+        return null;
+      }
+
+      return {
+        chatId: evt.result._chatId,
+        timestamp: evt.result._msgId,
+        from: evt.result._from,
+        message: contract.tronWeb.toUtf8(evt.result._message),
+        my: isAddressesEqual(contract.tronWeb, evt.result._from, accountId)
+      };
+    },
+    [contract, accountId]
+  );
+
+  React.useEffect(() => {
+    lastMessageEventRef.current = null;
+    fetchMessageEvents().then(events => {
+      setMessages(events.map(toMessage));
+    });
+  }, [fetchMessageEvents, toMessage]);
+
+  const handleMessagesLoadMore = React.useCallback(
+    async page => {
+      const events = await fetchMessageEvents(page);
+      setMessages(currentMessages => {
+        return currentMessages.concat(events.map(toMessage));
+      });
+    },
+    [fetchMessageEvents, toMessage]
+  );
+
+  const getMessageEventMethod = React.useCallback(
+    () => contract && contract.Message(),
+    [contract]
+  );
+
+  const handleMessageEventRes = React.useCallback(
+    evt => {
+      if (evt.result._chatId === chatId) {
+        setMessages(messages => [toMessage(evt), ...messages]);
+      }
+    },
+    [chatId, setMessages, toMessage]
+  );
+
+  useWatcher(getMessageEventMethod, handleMessageEventRes);
+
+  const messageFieldRef = React.useRef(null);
+
+  // const [sending, setSending] = React.useState(false);
+  const sending = false;
+
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  });
+
+  const handleSendMessage = React.useCallback(async () => {
+    if (!contract) {
+      return;
+    }
+
+    const message = `${messageFieldRef.current.value.trim()}`;
+    if (!message) return;
+
+    // setSending(true);
+    try {
+      cogoToast.info("Sending encrypted message...");
+
+      messageFieldRef.current.value = "";
+      await sendMessage(chatId, contract.tronWeb.fromUtf8(message));
+
+      // if (mountedRef.current) {
+      //   messageFieldRef.current.value = "";
+      //   setSending(false);
+      // }
+    } catch (err) {
+      if (process.env.NODE_ENV === "development") {
+        console.error(err);
+      }
+
+      cogoToast.error(err.message);
+      // if (mountedRef.current) {
+      //   messageFieldRef.current.value = "";
+      //   setSending(false);
+      // }
+    }
+  }, [contract, sendMessage, chatId]);
 
   return (
     <Div100vh>
@@ -59,33 +165,77 @@ const Chat = restrictWithTronWeb(({ params }) => {
             "flex flex-col"
           )}
         >
-          <div className="flex-1" />
-          {messages.map(({ text }, i) => (
-            <div key={i} className={classNames("flex items-center", "mt-4")}>
-              <span
-                key={i}
-                className={classNames("py-2 px-5", "bg-gray-200", "rounded")}
-              >{`${text} ${i}`}</span>
-            </div>
-          ))}
+          <div className="flex-1">
+            {messages.length === 0 ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="font-semibold text-gray-500">No Messages</span>
+              </div>
+            ) : null}
+          </div>
+          <InfiniteScroll
+            isReverse={true}
+            pageStart={1}
+            initialLoad={false}
+            loadMore={handleMessagesLoadMore}
+            hasMore={messageEventsHasMoreRef.current}
+            loader={
+              <div
+                key="-1"
+                className="py-4 px-2 flex justify-center text-gray-500"
+              >
+                Loading ...
+              </div>
+            }
+            useWindow={false}
+            getScrollParent={() => messagesBlockRef.current}
+          >
+            {[]
+              .concat(messages)
+              .reverse()
+              .map(({ message, my }, i) => (
+                <div
+                  key={i}
+                  className={classNames("flex items-center", "mt-4")}
+                >
+                  {my ? <div className="flex-1" /> : null}
+                  <span
+                    key={i}
+                    className={classNames(
+                      "py-2 px-5",
+                      my ? "bg-blue-200" : "bg-gray-200",
+                      "text-sm text-gray-800",
+                      "rounded"
+                    )}
+                  >
+                    {message}
+                  </span>
+                </div>
+              ))}
+          </InfiniteScroll>
         </div>
         <form
           className={classNames(
             "w-full h-16",
             "bg-gray-200",
             "p-2",
-            "flex items-strech"
+            "flex items-strech",
+            sending && "pointer-events-none",
+            sending && "opacity-50"
           )}
         >
           <textarea
+            ref={messageFieldRef}
             className={classNames(
               "flex-1",
               "bg-white rounded",
               "py-1 px-2",
               "focus:outline-none focus:shadow-outline"
             )}
+            disabled={sending}
           />
           <button
+            type="button"
+            disabled={sending}
             className={classNames(
               "ml-2",
               "w-20",
@@ -95,8 +245,9 @@ const Chat = restrictWithTronWeb(({ params }) => {
               "font-bold",
               "flex items-center justify-center"
             )}
+            onClick={handleSendMessage}
           >
-            Send
+            {sending ? "..." : "Send"}
           </button>
         </form>
       </ContentContainer>
