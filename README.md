@@ -1,3 +1,29 @@
+# Trust Chat
+
+🤖Super cute encrypted chat built on Tron.
+
+Chat List                  |  Chat(Messages)
+:-------------------------:|:-------------------------:
+![Trust Chat](https://user-images.githubusercontent.com/11996139/77000945-cff67080-6961-11ea-9a82-6313e4351846.png)  |  ![Trust Chat](https://user-images.githubusercontent.com/11996139/77000720-8017a980-6961-11ea-8d01-3af13b90ca44.png)
+
+
+This project was developed as part of the [UTON HACK](http://utonhack.com/) event. 
+
+### Features
+1) Create a new chat for multiple members.
+2) Assign to chat.
+3) Send and receive messages in chat.
+
+### WHY?
+
+Problem          | Solution
+:---------------:|:----------------:
+![Trust Chat](https://user-images.githubusercontent.com/11996139/77001811-3334d280-6963-11ea-91aa-b6703abc5235.png)  |  ![Trust Chat](https://user-images.githubusercontent.com/11996139/77001981-73945080-6963-11ea-8812-395e1cf98dfa.png)
+
+### HOW IT WORKS
+
+![Trust Chat](https://user-images.githubusercontent.com/11996139/77002071-97f02d00-6963-11ea-8746-bbfc28b47e70.png)
+
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
 ## Available Scripts
